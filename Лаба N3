@@ -1,0 +1,113 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Структура жанра фильма
+typedef struct {
+    char genre[30];
+} Genre;
+
+// Структура информации о фильме
+typedef struct {
+    int duration; // Длительность в минутах
+    char *title;  // Название
+    Genre genre;  // Жанр
+    int releaseYear; // Год выпуска
+} Movie;
+
+// Функции для работы с массивом структур
+void inputMovie(Movie *movie) {
+    char buffer[100];
+    printf("Введите название фильма: ");
+    scanf("%s", buffer);
+    movie->title = malloc(strlen(buffer) + 1);
+    strcpy(movie->title, buffer);
+    printf("Введите длительность фильма в минутах: ");
+    scanf("%d", &(movie->duration));
+    printf("Введите жанр фильма: ");
+    scanf("%s", movie->genre.genre);
+    printf("Введите год выпуска фильма: ");
+    scanf("%d", &(movie->releaseYear));
+}
+
+void outputMovie(const Movie *movie) {
+    printf("Название: %s, Длительность: %d минут, Жанр: %s, Год выпуска: %d\n",
+           movie->title, movie->duration, movie->genre.genre, movie->releaseYear);
+}
+
+void deleteMovie(Movie *movie) {
+    free(movie->title);
+}
+
+void findMovieByTitle(Movie *movies, int count, const char *title) {
+    for (int i = 0; i < count; i++) {
+        if (strcmp(movies[i].title, title) == 0) {
+            printf("Найден фильм: ");
+            outputMovie(&movies[i]);
+        }
+    }
+}
+
+void deleteMoviesByDuration(Movie *movies, int *count, int maxDuration) {
+    for (int i = 0; i < *count; i++) {
+        if (movies[i].duration > maxDuration) {
+            deleteMovie(&movies[i]);
+            for (int j = i; j < *count - 1; j++) {
+                movies[j] = movies[j + 1];
+            }
+            (*count)--;
+            i--;
+        }
+    }
+}
+
+int main() {
+    int choice, movieCount = 0, capacity = 5;
+    Movie *movies = malloc(capacity * sizeof(Movie));
+
+    while (1) {
+        printf("\nМеню:\n");
+        printf("1. Добавить фильм\n");
+        printf("2. Просмотреть фильмы\n");
+        printf("3. Найти фильм по названию\n");
+        printf("4. Удалить фильмы с длительностью больше заданной\n");
+        printf("5. Выход\n");
+        printf("Введите ваш выбор: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                if (movieCount == capacity) {
+                    capacity *= 2;
+                    movies = realloc(movies, capacity * sizeof(Movie));
+                }
+                inputMovie(&movies[movieCount++]);
+                break;
+            case 2:
+                for (int i = 0; i < movieCount; i++) {
+                    outputMovie(&movies[i]);
+                }
+                break;
+            case 3: {
+                char title[100];
+                printf("Введите название для поиска: ");
+                scanf("%s", title);
+                findMovieByTitle(movies, movieCount, title);
+                break;
+            }
+            case 4: {
+                int maxDuration;
+                printf("Введите максимальную длительность: ");
+                scanf("%d", &maxDuration);
+                deleteMoviesByDuration(movies, &movieCount, maxDuration);
+                break;
+            }
+            case 5:
+                for (int i = 0; i < movieCount; i++) {
+                    deleteMovie(&movies[i]);
+                }
+                free(movies);
+                return 0;
+        }
+    }
+}
