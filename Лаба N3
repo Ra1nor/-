@@ -2,36 +2,36 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Структура жанра фильма
 typedef struct {
     char genre[30];
 } Genre;
 
-// Структура информации о фильме
 typedef struct {
-    int duration; // Длительность в минутах
-    char *title;  // Название
-    Genre genre;  // Жанр
-    int releaseYear; // Год выпуска
+    unsigned int duration : 12;   
+    char *title;                  
+    Genre genre;                   
+    unsigned int releaseYear : 12; 
 } Movie;
 
-// Функции для работы с массивом структур
 void inputMovie(Movie *movie) {
     char buffer[100];
     printf("Введите название фильма: ");
-    scanf("%s", buffer);
+    scanf("%99s", buffer);
     movie->title = malloc(strlen(buffer) + 1);
     strcpy(movie->title, buffer);
+    
     printf("Введите длительность фильма в минутах: ");
-    scanf("%d", &(movie->duration));
+    scanf("%u", &(movie->duration));
+    
     printf("Введите жанр фильма: ");
-    scanf("%s", movie->genre.genre);
+    scanf("%29s", movie->genre.genre);
+    
     printf("Введите год выпуска фильма: ");
-    scanf("%d", &(movie->releaseYear));
+    scanf("%u", &(movie->releaseYear));
 }
 
 void outputMovie(const Movie *movie) {
-    printf("Название: %s, Длительность: %d минут, Жанр: %s, Год выпуска: %d\n",
+    printf("Название: %s, Длительность: %u минут, Жанр: %s, Год выпуска: %u\n",
            movie->title, movie->duration, movie->genre.genre, movie->releaseYear);
 }
 
@@ -48,7 +48,7 @@ void findMovieByTitle(Movie *movies, int count, const char *title) {
     }
 }
 
-void deleteMoviesByDuration(Movie *movies, int *count, int maxDuration) {
+void deleteMoviesByDuration(Movie *movies, int *count, unsigned int maxDuration) {
     for (int i = 0; i < *count; i++) {
         if (movies[i].duration > maxDuration) {
             deleteMovie(&movies[i]);
@@ -91,14 +91,14 @@ int main() {
             case 3: {
                 char title[100];
                 printf("Введите название для поиска: ");
-                scanf("%s", title);
+                scanf("%99s", title);
                 findMovieByTitle(movies, movieCount, title);
                 break;
             }
             case 4: {
-                int maxDuration;
+                unsigned int maxDuration;
                 printf("Введите максимальную длительность: ");
-                scanf("%d", &maxDuration);
+                scanf("%u", &maxDuration);
                 deleteMoviesByDuration(movies, &movieCount, maxDuration);
                 break;
             }
@@ -111,3 +111,4 @@ int main() {
         }
     }
 }
+
