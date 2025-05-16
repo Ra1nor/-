@@ -1,45 +1,76 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 typedef struct {
     char genre[30];
 } Genre;
 
 typedef struct {
-    unsigned int duration : 12;   
-    char *title;                  
-    Genre genre;                   
-    unsigned int releaseYear : 12; 
+    unsigned int duration : 12;  // Битовое поле (макс. 4095 минут)
+    char* title;
+    Genre genre;
+    unsigned int releaseYear : 12;  // Битовое поле (макс. 4095 год)
 } Movie;
 
-void inputMovie(Movie *movie) {
+void clearInputBuffer() {
+    while (getchar() != '\n');
+}
+
+void inputUnsignedInt(unsigned int* value, unsigned int max) {
+    unsigned int temp;
+    while (1) {
+        if (scanf_s("%u", &temp) != 1 || temp > max) {
+            printf("Ошибка ввода! Введите число от 0 до %u.\n", max);
+            clearInputBuffer();
+        }
+        else {
+            *value = temp;
+            clearInputBuffer();
+            break;
+        }
+    }
+}
+
+void inputMovie(Movie* movie) {
     char buffer[100];
+
     printf("Введите название фильма: ");
-    scanf("%99s", buffer);
-    movie->title = malloc(strlen(buffer) + 1);
-    strcpy(movie->title, buffer);
-    
-    printf("Введите длительность фильма в минутах: ");
-    scanf("%u", &(movie->duration));
-    
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        printf("Ошибка ввода.\n");
+        return;
+    }
+    buffer[strcspn(buffer, "\n")] = '\0';
+    movie->title = strdup(buffer);
+
+    unsigned int tempDuration, tempYear;
+    printf("Введите длительность фильма в минутах (0-4095): ");
+    inputUnsignedInt(&tempDuration, 4095);
+    movie->duration = tempDuration;
+
     printf("Введите жанр фильма: ");
-    scanf("%29s", movie->genre.genre);
-    
-    printf("Введите год выпуска фильма: ");
-    scanf("%u", &(movie->releaseYear));
+    if (fgets(movie->genre.genre, sizeof(movie->genre.genre), stdin) == NULL) {
+        printf("Ошибка ввода.\n");
+        return;
+    }
+    movie->genre.genre[strcspn(movie->genre.genre, "\n")] = '\0';
+
+    printf("Введите год выпуска фильма (0-4095): ");
+    inputUnsignedInt(&tempYear, 4095);
+    movie->releaseYear = tempYear;
 }
 
-void outputMovie(const Movie *movie) {
+void outputMovie(const Movie* movie) {
     printf("Название: %s, Длительность: %u минут, Жанр: %s, Год выпуска: %u\n",
-           movie->title, movie->duration, movie->genre.genre, movie->releaseYear);
+        movie->title, movie->duration, movie->genre.genre, movie->releaseYear);
 }
 
-void deleteMovie(Movie *movie) {
+void deleteMovie(Movie* movie) {
     free(movie->title);
 }
 
-void findMovieByTitle(Movie *movies, int count, const char *title) {
+void findMovieByTitle(Movie* movies, int count, const char* title) {
     for (int i = 0; i < count; i++) {
         if (strcmp(movies[i].title, title) == 0) {
             printf("Найден фильм: ");
@@ -48,7 +79,7 @@ void findMovieByTitle(Movie *movies, int count, const char *title) {
     }
 }
 
-void deleteMoviesByDuration(Movie *movies, int *count, unsigned int maxDuration) {
+void deleteMoviesByDuration(Movie* movies, int* count, unsigned int maxDuration) {
     for (int i = 0; i < *count; i++) {
         if (movies[i].duration > maxDuration) {
             deleteMovie(&movies[i]);
@@ -61,9 +92,19 @@ void deleteMoviesByDuration(Movie *movies, int *count, unsigned int maxDuration)
     }
 }
 
+int getSign(int num) {
+    return (num >> (sizeof(int) * 8 - 1)) | (!!num);
+}
+
 int main() {
+    setlocale(LC_ALL, "RU");
     int choice, movieCount = 0, capacity = 5;
-    Movie *movies = malloc(capacity * sizeof(Movie));
+    Movie* movies = malloc(capacity * sizeof(Movie));
+
+    if (!movies) {
+        printf("Ошибка выделения памяти.\n");
+        return 1;
+    }
 
     while (1) {
         printf("\nМеню:\n");
@@ -71,43 +112,78 @@ int main() {
         printf("2. Просмотреть фильмы\n");
         printf("3. Найти фильм по названию\n");
         printf("4. Удалить фильмы с длительностью больше заданной\n");
-        printf("5. Выход\n");
+        printf("5. Определить знак числа\n");
+        printf("6. Выход\n");
         printf("Введите ваш выбор: ");
-        scanf("%d", &choice);
+
+        while (1) {
+            if (scanf_s("%d", &choice) != 1) {
+                printf("Ошибка ввода! Повторите попытку.\n");
+                clearInputBuffer();
+            }
+            else {
+                clearInputBuffer();
+                break;
+            }
+        }
 
         switch (choice) {
-            case 1:
-                if (movieCount == capacity) {
-                    capacity *= 2;
-                    movies = realloc(movies, capacity * sizeof(Movie));
+        case 1:
+            if (movieCount == capacity) {
+                capacity *= 2;
+                movies = realloc(movies, capacity * sizeof(Movie));
+                if (!movies) {
+                    printf("Ошибка выделения памяти.\n");
+                    return 1;
                 }
-                inputMovie(&movies[movieCount++]);
-                break;
-            case 2:
-                for (int i = 0; i < movieCount; i++) {
-                    outputMovie(&movies[i]);
-                }
-                break;
-            case 3: {
-                char title[100];
-                printf("Введите название для поиска: ");
-                scanf("%99s", title);
-                findMovieByTitle(movies, movieCount, title);
+            }
+            inputMovie(&movies[movieCount++]);
+            break;
+        case 2:
+            for (int i = 0; i < movieCount; i++) {
+                outputMovie(&movies[i]);
+            }
+            break;
+        case 3: {
+            char title[100];
+            printf("Введите название для поиска: ");
+            if (fgets(title, sizeof(title), stdin) == NULL) {
+                printf("Ошибка ввода.\n");
                 break;
             }
-            case 4: {
-                unsigned int maxDuration;
-                printf("Введите максимальную длительность: ");
-                scanf("%u", &maxDuration);
-                deleteMoviesByDuration(movies, &movieCount, maxDuration);
-                break;
-            }
-            case 5:
-                for (int i = 0; i < movieCount; i++) {
-                    deleteMovie(&movies[i]);
+            title[strcspn(title, "\n")] = '\0';
+            findMovieByTitle(movies, movieCount, title);
+            break;
+        }
+        case 4: {
+            unsigned int maxDuration;
+            printf("Введите максимальную длительность: ");
+            inputUnsignedInt(&maxDuration, 4095);
+            deleteMoviesByDuration(movies, &movieCount, maxDuration);
+            break;
+        }
+        case 5: {
+            int num;
+            printf("Введите число: ");
+            while (1) {
+                if (scanf_s("%d", &num) != 1) {
+                    printf("Ошибка ввода! Повторите попытку.\n");
+                    clearInputBuffer();
                 }
-                free(movies);
-                return 0;
+                else {
+                    clearInputBuffer();
+                    break;
+                }
+            }
+            printf("Знак числа: %d\n", getSign(num));
+            break;
+        }
+        case 6:
+            for (int i = 0; i < movieCount; i++) {
+                deleteMovie(&movies[i]);
+            }
+            free(movies);
+            return 0;
         }
     }
 }
